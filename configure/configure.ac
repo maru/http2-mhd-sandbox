@@ -8,7 +8,6 @@ AC_CHECK_HEADER([stdbool.h], [], [], [AC_INCLUDES_DEFAULT])
 AC_DEFUN(PKG_CHECK_MODULES, [])
 
 AC_DEFUN([AM_CONDITIONAL], [if $2; then $1=true; else $1=false; fi])
-
 dnl ***************************************************************************
 dnl nghttp2
 dnl ***************************************************************************
@@ -17,20 +16,19 @@ NGHTTP2_CPPFLAGS=""
 NGHTTP2_LDFLAGS=""
 have_nghttp2="no"
 
-# optional: HTTP/2 support. Disabled by default
+# optional: HTTP2 support. Disabled by default
 AC_ARG_ENABLE([http2],
    [AS_HELP_STRING([--enable-http2],
-               [enable HTTP/2 support (yes, no)[no]])],
+               [enable HTTP2 support (yes, no)[no]])],
    [enable_http2=${enableval}])
 if test "x$enable_http2" = "xyes"
 then
-
   # nghttp2
   have_nghttp2_pkgcfg=no
   want_http2=yes
   AC_MSG_CHECKING([[how to find nghttp2 library]])
   AC_ARG_WITH(nghttp2,
-     [AS_HELP_STRING([[--with-nghttp2[=PFX]]],[use nghttp2 for HTTP/2 support, optional PFX overrides pkg-config data for nghttp2 headers (PFX/include) and libs (PFX/lib)])],
+     [AS_HELP_STRING([[--with-nghttp2[=PFX]]],[use nghttp2 for HTTP2 support, optional PFX overrides pkg-config data for nghttp2 headers (PFX/include) and libs (PFX/lib)])],
      [
       case $with_nghttp2 in
         no)
@@ -43,26 +41,30 @@ then
           ;;
         *)
           AC_MSG_RESULT([[-I$with_nghttp2/include -L$with_nghttp2/lib -lnghttp2]])
+          want_http2=yes
           try_with_nghttp2=yes
           ;;
       esac
      ],
      [AC_MSG_RESULT([[automatically]])
+     want_http2=yes
      ])
 
   dnl Check nghttp2 version
-  AC_DEFUN(NGHTTP2_CHECK, [
+  AC_DEFUN([NGHTTP2_CHECK], [
     have_nghttp2=no
-    NGHTTP2_CPPFLAGS="$CPPFLAGS"
-    NGHTTP2_LDFLAGS="$LDFLAGS"
-
     # curl: curl/configure.ac
     # use nghttp2_option_set_no_recv_client_magic to require nghttp2 >= 1.0.0
-    AC_CHECK_HEADERS([nghttp2/nghttp2.h],
-      [AC_CHECK_FUNCS([nghttp2_option_set_no_recv_client_magic],
-        [have_nghttp2='yes'], [])
-      ], [], [AC_INCLUDES_DEFAULT])
-    AS_IF([test "x$have_nghttp2" != "xyes"], [AC_MSG_ERROR([cannot find usable libnghttp2 at specified prefix $with_nghttp2])])
+    AC_CHECK_LIB(nghttp2, nghttp2_option_set_no_recv_client_magic,
+      [
+       AC_CHECK_HEADERS(nghttp2/nghttp2.h,
+          NGHTTP2_CPPFLAGS="-I$with_nghttp2/include"
+          NGHTTP2_LDFLAGS="-L$with_nghttp2/lib"
+          NGHTTP2_LIBS="-lnghttp2"
+          have_nghttp2=yes
+       )
+      ],
+    )
 
     # Apache: httpd/modules/http2/config2.m4
     AC_MSG_CHECKING([for nghttp2 version >= 1.2.1])
@@ -107,13 +109,6 @@ then
     else
       AC_MSG_WARN([nghttp2 version is too old])
     fi
-    if test "x$have_nghttp2" = "xyes"; then
-      AC_DEFINE(HAVE_NGHTTP2, 1, [Define if nghttp2 is available])
-    fi
-    LIBS="$SAVE_LIBS"
-    LDFLAGS="$SAVE_LDFLAGS"
-    CPPFLAGS="$SAVE_CPPFLAGS"
-    AS_IF([test "x$have_nghttp2" != "xyes"], [AC_MSG_ERROR([cannot find usable libnghttp2 at specified prefix $with_nghttp2])])
   ]) dnl NGHTTP2_CHECK
 
   # Check for nghttp2 at given path
@@ -121,22 +116,17 @@ then
     [
       SAVE_LDFLAGS="$LDFLAGS"
       SAVE_CPPFLAGS="$CPPFLAGS"
-      # SAVE_LIBS="$LIBS"
+      SAVE_LIBS="$LIBS"
       LDFLAGS="-L$with_nghttp2/lib $LDFLAGS"
       CPPFLAGS="-I$with_nghttp2/include $CPPFLAGS"
-      # LIBS="-lnghttp2 $LIBS"
-      have_nghttp2_pkgcfg='no'
       NGHTTP2_CHECK()
       AS_IF([test "x$have_nghttp2" != "xyes"], [AC_MSG_ERROR([cannot find usable libnghttp2 at specified prefix $with_nghttp2])])
-      LDFLAGS="$SAVE_LDFLAGS"
-      CPPFLAGS="$SAVE_CPPFLAGS"
-      # LIBS="$SAVE_LIBS"
     ], [])
 
   # Check for nghttp2 at default paths
   AS_IF([test "x$want_http2" != "xno" && test "x$have_nghttp2" != "xyes"],
     [
-      PKG_CHECK_MODULES(NGHTTP2, [[nghttp2]],
+      PKG_CHECK_MODULES(NGHTTP2, [[libnghttp2]],
         [
          have_nghttp2_pkgcfg='yes'
          SAVE_CPPFLAGS="$CPPFLAGS"
@@ -168,27 +158,28 @@ then
          CFLAGS="$SAVE_CFLAGS"
          LDFLAGS="$SAVE_LDFLAGS"
          LIBS="$SAVE_LIBS"
-        ],
-        [
-         # check for nghttp2 at default paths
-         have_nghttp2_pkgcfg='no'
-         NGHTTP2_CHECK()
-         AS_IF([test "x$have_nghttp2" = "xyes"],
-           [
-            AC_MSG_RESULT([[yes]])
-            have_nghttp2=yes
-            NGHTTP2_CPPFLAGS="$NGHTTP2_CFLAGS"
-            NGHTTP2_LDFLAGS="$NGHTTP2_LIBS"
-           ],
-           [
-            AC_MSG_RESULT([[no]])
-            have_nghttp2=no
-           ]
-         )
-        ])
-    ],
-    []
+        ], [])
+    ], []
   )
+
+  AS_IF([test "x$want_http2" != "xno" && test "x$have_nghttp2" != "xyes"],
+  [
+    # check for nghttp2 at default paths
+    have_nghttp2_pkgcfg='no'
+    NGHTTP2_CHECK()
+    AS_IF([test "x$have_nghttp2" = "xyes"],
+      [
+       AC_MSG_RESULT([[yes]])
+       have_nghttp2=yes
+       NGHTTP2_CPPFLAGS="$NGHTTP2_CFLAGS"
+       NGHTTP2_LDFLAGS="$NGHTTP2_LIBS"
+      ],
+      [
+       AC_MSG_RESULT([[no]])
+       have_nghttp2=no
+      ]
+    )
+  ])
   AS_IF([test "x$have_nghttp2" != "xyes" && test "x$with_nghttp2" = "xyes"], [AC_MSG_ERROR([[cannot find usable libnghttp2]])])
 
   AC_SUBST([NGHTTP2_CPPFLAGS])
@@ -198,6 +189,7 @@ then
 
   AS_IF([[test "x$have_nghttp2" = "xyes"]],
     [
+      AC_DEFINE(HAVE_NGHTTP2, 1, [Define if nghttp2 is available])
       AC_DEFINE([[HTTP2_SUPPORT]],[[1]],[Define to 1 if libmicrohttpd is compiled with HTTP2 support.])
       enable_http2=yes
       MSG_HTTP2="yes (using libnghttp2)"
@@ -225,7 +217,7 @@ else
   MSG_HTTP2="no (disabled)"
 fi
 
-AC_MSG_CHECKING(whether to support HTTP/2)
+AC_MSG_CHECKING(whether to support HTTP2)
 AC_MSG_RESULT([$MSG_HTTP2])
 
 AM_CONDITIONAL([HAVE_NGHTTP2], [[test "x$have_nghttp2" = "xyes"]])
