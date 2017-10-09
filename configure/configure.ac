@@ -226,7 +226,7 @@ AM_CONDITIONAL([ENABLE_HTTP2], [test "x$enable_http2" = "xyes"])
 dnl ***************************************************************************
 
 AC_MSG_NOTICE([${PACKAGE_NAME} ${PACKAGE_VERSION} Configuration Summary:
-  HTTP/2 support:     ${MSG_HTTP2}
+  HTTP2 support:     ${MSG_HTTP2}
   http2 MHD_LIB_CPPFLAGS=$MHD_LIB_CPPFLAGS
   http2 MHD_LIB_LDFLAGS=$MHD_LIB_LDFLAGS
   http2 MHD_LIB_CFLAGS=$MHD_LIB_CFLAGS
