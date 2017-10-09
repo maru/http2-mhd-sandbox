@@ -189,8 +189,8 @@ then
 
   AS_IF([[test "x$have_nghttp2" = "xyes"]],
     [
-      AC_DEFINE(HAVE_NGHTTP2, 1, [Define if nghttp2 is available])
-      AC_DEFINE([[HTTP2_SUPPORT]],[[1]],[Define to 1 if libmicrohttpd is compiled with HTTP2 support.])
+      AC_DEFINE([[USE_NGHTTP2]], [[1]], [Define if nghttp2 is available])
+      AC_DEFINE([[HTTP2_SUPPORT]], [[1]], [Define to 1 if libmicrohttpd is compiled with HTTP2 support.])
       enable_http2=yes
       MSG_HTTP2="yes (using libnghttp2)"
       MHD_LIB_CPPFLAGS="$MHD_LIB_CPPFLAGS $NGHTTP2_CPPFLAGS"
