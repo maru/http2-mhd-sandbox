@@ -5,7 +5,7 @@
 AC_INIT([hello], [1.0]) # good
 AC_CHECK_HEADER([stdbool.h], [], [], [AC_INCLUDES_DEFAULT])
 
-AC_DEFUN(PKG_CHECK_MODULES, [])
+# AC_DEFUN(PKG_CHECK_MODULES, [])
 
 AC_DEFUN([AM_CONDITIONAL], [if $2; then $1=true; else $1=false; fi])
 dnl ***************************************************************************

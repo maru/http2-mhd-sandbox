@@ -2,7 +2,7 @@
 PREFIX_DIR=$HOME/dev/http2/usr/local
 
 reset
-autoconf || exit 1
+autoreconf -fi || exit 1
 
 VERBOSE=0
 if [ "$1" == "-v" ]; then VERBOSE=1; fi
@@ -31,13 +31,14 @@ function run_test_check
 
 GREP_PATTERN="HTTP/2\|http2\|HTTP2"
 
-# This test can fail, because libnghttp2 is installed in the system
 CHECK_PATTERN="^configure: error: cannot find usable libnghttp2 at specified prefix /path$"
 run_test_check "--enable-http2 --with-nghttp2=/path"     "$GREP_PATTERN" "$CHECK_PATTERN"
 
 CHECK_PATTERN="HTTP2 support:     yes (using libnghttp2)"
 run_test_check "--enable-http2 --with-nghttp2=${PREFIX_DIR}" "$GREP_PATTERN" "$CHECK_PATTERN"
 
+# These two tests can fail if libnghttp2 is not installed in the system (default directories).
+CHECK_PATTERN="^configure: error: cannot find usable libnghttp2 at specified prefix"
 run_test_check "--enable-http2"                              "$GREP_PATTERN" "$CHECK_PATTERN"
 run_test_check "--enable-http2 --with-nghttp2"               "$GREP_PATTERN" "$CHECK_PATTERN"
 
