@@ -17,13 +17,15 @@
      Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 /**
- * @file minimal_example.c
- * @brief minimal example for how to use libmicrohttpd
+ * @file http2_minimal_example.c
+ * @brief minimal example for how to use libmicrohttpd with HTTP/2
  * @author Christian Grothoff
+ * @author Maru Berezin
  */
 
 #include "platform.h"
 #include <microhttpd.h>
+#include <nghttp2/nghttp2.h>
 
 #define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
 
@@ -71,6 +73,14 @@ main (int argc, char *const *argv)
       printf ("%s PORT\n", argv[0]);
       return 1;
     }
+
+  /* Default HTTP2 server settings */
+  nghttp2_settings_entry settings[3];
+  int slen = 0;
+  settings[slen].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
+  settings[slen].value = 100;
+  ++slen;
+
   d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                         MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
                         /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
@@ -78,8 +88,9 @@ main (int argc, char *const *argv)
 			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                         atoi (argv[1]),
                         NULL, NULL, &ahc_echo, PAGE,
-			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 120,
+			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 30,
 			MHD_OPTION_STRICT_FOR_CLIENT, (int) 1,
+			MHD_OPTION_H2_SETTINGS, slen, settings,
 			MHD_OPTION_END);
   if (d == NULL)
     return 1;
