@@ -49,13 +49,13 @@ ahc_echo (void *cls,
   if (0 != strcmp (method, "GET")) {
     return MHD_NO;              /* unexpected method */
   }
-  if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
-  *ptr = NULL;                  /* reset when done */
+    if (&aptr != *ptr)
+      {
+        /* do never respond on first call */
+        *ptr = &aptr;
+        return MHD_YES;
+      }
+    *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_buffer (strlen (me),
 					      (void *) me,
 					      MHD_RESPMEM_PERSISTENT);
