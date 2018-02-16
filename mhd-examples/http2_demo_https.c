@@ -692,21 +692,12 @@ generate_page (void *cls,
 	       const char *upload_data,
 	       size_t *upload_data_size, void **ptr)
 {
-  static int aptr;
   struct MHD_Response *response;
   int ret;
   int fd;
   struct stat buf;
   (void)cls;               /* Unused. Silent compiler warning. */
   (void)version;           /* Unused. Silent compiler warning. */
-
-  if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
-  *ptr = NULL;                  /* reset when done */
 
   if (0 != strcmp (url, "/"))
     {
