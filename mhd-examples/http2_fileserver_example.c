@@ -34,7 +34,7 @@
 #include <fcntl.h>
 #endif /* HAVE_FCNTL_H */
 
-#define PAGE "<html><head><title>File not found</title></head><body>File not found</body></html>\n"
+#define PAGE "<html><head><title>File not found</title></head><body>File not found</body></html>"
 
 #ifndef S_ISREG
 #define S_ISREG(x) (S_IFREG == (x & S_IFREG))
@@ -59,9 +59,16 @@ ahc_echo (void *cls,
   (void)upload_data;       /* Unused. Silent compiler warning. */
   (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
-  // if ( (0 != strcmp (method, MHD_HTTP_METHOD_GET)) &&
-  //      (0 != strcmp (method, MHD_HTTP_METHOD_HEAD)) )
-  //   return MHD_NO;              /* unexpected method */
+  if ( (0 != strcmp (method, MHD_HTTP_METHOD_GET)) &&
+       (0 != strcmp (method, MHD_HTTP_METHOD_HEAD)) )
+    return MHD_NO;              /* unexpected method */
+  if (&aptr != *ptr)
+    {
+      /* do never respond on first call */
+      *ptr = &aptr;
+      return MHD_YES;
+    }
+  *ptr = NULL;                  /* reset when done */
   /* WARNING: direct usage of url as filename is for example only!
    * NEVER pass received data directly as parameter to file manipulation
    * functions. Always check validity of data before using.
@@ -115,12 +122,9 @@ main (int argc, char *const *argv)
       printf ("%s PORT\n", argv[0]);
       return 1;
     }
-  d = MHD_start_daemon (//MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
-    MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
                         atoi (argv[1]),
-                        NULL, NULL, &ahc_echo, PAGE,
-                        MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,
-                        MHD_OPTION_END);
+                        NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
   if (d == NULL)
     return 1;
   (void) getc (stdin);

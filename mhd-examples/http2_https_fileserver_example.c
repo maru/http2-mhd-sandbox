@@ -35,15 +35,11 @@
 #include "platform.h"
 #include <microhttpd.h>
 #include <sys/stat.h>
-#include <gnutls/gnutls.h>
-#ifdef MHD_HTTPS_REQUIRE_GRYPT
-#include <gcrypt.h>
-#endif
 
 #define BUF_SIZE 1024
 #define MAX_URL_LEN 255
 
-// TODO remove if unused
+/* TODO remove if unused */
 #define CAFILE "ca.pem"
 #define CRLFILE "crl.pem"
 
@@ -101,6 +97,7 @@ static ssize_t
 file_reader (void *cls, uint64_t pos, char *buf, size_t max)
 {
   FILE *file = cls;
+
   (void) fseek (file, pos, SEEK_SET);
   return fread (buf, 1, max, file);
 }
@@ -135,13 +132,13 @@ http_ahc (void *cls,
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))
     return MHD_NO;              /* unexpected method */
-  // if (&aptr != *ptr)
-  //   {
-  //     /* Only for POST */
-  //     *ptr = &aptr;
-  //     return MHD_YES;
-  //   }
-  // *ptr = NULL;                  /* reset when done */
+  if (&aptr != *ptr)
+    {
+      /* do never respond on first call */
+      *ptr = &aptr;
+      return MHD_YES;
+    }
+  *ptr = NULL;                  /* reset when done */
 
   file = fopen (&url[1], "rb");
   if (NULL != file)
@@ -206,15 +203,13 @@ main (int argc, char *const *argv)
       return 1;
     }
 
-  /* TODO check if this is truly necessary -  disallow usage of the blocking /dev/random */
-  /* gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0); */
   TLS_daemon =
     MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG |
                       MHD_USE_TLS | MHD_USE_HTTP2,
                       (uint16_t) port,
                       NULL, NULL,
                       &http_ahc, NULL,
-                      MHD_OPTION_CONNECTION_TIMEOUT, 10,
+                      MHD_OPTION_CONNECTION_TIMEOUT, 256,
                       MHD_OPTION_HTTPS_MEM_KEY, key_pem,
                       MHD_OPTION_HTTPS_MEM_CERT, cert_pem,
                       MHD_OPTION_END);

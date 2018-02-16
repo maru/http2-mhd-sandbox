@@ -46,16 +46,15 @@ ahc_echo (void *cls,
   (void)upload_data;       /* Unused. Silent compiler warning. */
   (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
-  if (0 != strcmp (method, "GET")) {
+  if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
-  }
-    // if (&aptr != *ptr)
-    //   {
-    //     /* do never respond on first call */
-    //     *ptr = &aptr;
-    //     return MHD_YES;
-    //   }
-    *ptr = NULL;                  /* reset when done */
+  if (&aptr != *ptr)
+    {
+      /* do never respond on first call */
+      *ptr = &aptr;
+      return MHD_YES;
+    }
+  *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_buffer (strlen (me),
 					      (void *) me,
 					      MHD_RESPMEM_PERSISTENT);
@@ -86,10 +85,10 @@ main (int argc, char *const *argv)
   d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                         MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
                         /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                        atoi (argv[1]),
-                        NULL, NULL, &ahc_echo, PAGE,
+      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
+      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
+                      atoi (argv[1]),
+                      NULL, NULL, &ahc_echo, PAGE,
 			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,
 			MHD_OPTION_STRICT_FOR_CLIENT, (int) 1,
 			MHD_OPTION_H2_SETTINGS, slen, settings,
