@@ -101,7 +101,6 @@ static ssize_t
 file_reader (void *cls, uint64_t pos, char *buf, size_t max)
 {
   FILE *file = cls;
-
   (void) fseek (file, pos, SEEK_SET);
   return fread (buf, 1, max, file);
 }
@@ -136,13 +135,13 @@ http_ahc (void *cls,
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))
     return MHD_NO;              /* unexpected method */
-  if (&aptr != *ptr)
-    {
-      /* do never respond on first call */
-      *ptr = &aptr;
-      return MHD_YES;
-    }
-  *ptr = NULL;                  /* reset when done */
+  // if (&aptr != *ptr)
+  //   {
+  //     /* Only for POST */
+  //     *ptr = &aptr;
+  //     return MHD_YES;
+  //   }
+  // *ptr = NULL;                  /* reset when done */
 
   file = fopen (&url[1], "rb");
   if (NULL != file)
@@ -215,7 +214,7 @@ main (int argc, char *const *argv)
                       (uint16_t) port,
                       NULL, NULL,
                       &http_ahc, NULL,
-                      MHD_OPTION_CONNECTION_TIMEOUT, 256,
+                      MHD_OPTION_CONNECTION_TIMEOUT, 10,
                       MHD_OPTION_HTTPS_MEM_KEY, key_pem,
                       MHD_OPTION_HTTPS_MEM_CERT, cert_pem,
                       MHD_OPTION_END);

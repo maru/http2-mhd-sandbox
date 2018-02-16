@@ -27,7 +27,7 @@
 #include <microhttpd.h>
 #include <nghttp2/nghttp2.h>
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
+#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>\n"
 
 static int
 ahc_echo (void *cls,
@@ -49,16 +49,17 @@ ahc_echo (void *cls,
   if (0 != strcmp (method, "GET")) {
     return MHD_NO;              /* unexpected method */
   }
-    if (&aptr != *ptr)
-      {
-        /* do never respond on first call */
-        *ptr = &aptr;
-        return MHD_YES;
-      }
+    // if (&aptr != *ptr)
+    //   {
+    //     /* do never respond on first call */
+    //     *ptr = &aptr;
+    //     return MHD_YES;
+    //   }
     *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_buffer (strlen (me),
 					      (void *) me,
 					      MHD_RESPMEM_PERSISTENT);
+  MHD_add_response_header(response, "header-test", "my value");
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
