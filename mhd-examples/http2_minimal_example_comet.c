@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007 Christian Grothoff (and other contributing authors)
+     Copyright (C) 2007, 2008 Christian Grothoff (and other contributing authors)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -17,17 +17,25 @@
      Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 /**
- * @file http2_minimal_example.c
- * @brief minimal example for how to use libmicrohttpd with HTTP/2
+ * @file minimal_example.c
+ * @brief minimal example for how to generate an infinite stream with libmicrohttpd
  * @author Christian Grothoff
- * @author Maru Berezin
  */
 
 #include "platform.h"
 #include <microhttpd.h>
-#include <nghttp2/nghttp2.h>
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>\n"
+static ssize_t
+data_generator (void *cls, uint64_t pos, char *buf, size_t max)
+{
+  (void)cls; /* Unused. Silent compiler warning. */
+  (void)pos; /* Unused. Silent compiler warning. */
+  if (max < 80)
+    return 0;
+  memset (buf, 'A', max - 1);
+  buf[79] = '\n';
+  return 80;
+}
 
 static int
 ahc_echo (void *cls,
@@ -38,16 +46,16 @@ ahc_echo (void *cls,
           const char *upload_data, size_t *upload_data_size, void **ptr)
 {
   static int aptr;
-  const char *me = cls;
   struct MHD_Response *response;
   int ret;
+  (void)cls;               /* Unused. Silent compiler warning. */
   (void)url;               /* Unused. Silent compiler warning. */
   (void)version;           /* Unused. Silent compiler warning. */
   (void)upload_data;       /* Unused. Silent compiler warning. */
   (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
-  // if (0 != strcmp (method, "GET"))
-  //   return MHD_NO;              /* unexpected method */
+  if (0 != strcmp (method, "GET"))
+    return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
     {
       /* do never respond on first call */
@@ -55,10 +63,9 @@ ahc_echo (void *cls,
       return MHD_YES;
     }
   *ptr = NULL;                  /* reset when done */
-  response = MHD_create_response_from_buffer (strlen (me),
-					      (void *) me,
-					      MHD_RESPMEM_PERSISTENT);
-  MHD_add_response_header(response, "header-test", "my value");
+  response = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
+                                                80,
+                                                &data_generator, NULL, NULL);
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -74,25 +81,9 @@ main (int argc, char *const *argv)
       printf ("%s PORT\n", argv[0]);
       return 1;
     }
-
-  /* Default HTTP2 server settings */
-  nghttp2_settings_entry settings[3];
-  int slen = 0;
-  settings[slen].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
-  settings[slen].value = 100;
-  ++slen;
-
-  d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                        MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
-                        /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                      atoi (argv[1]),
-                      NULL, NULL, &ahc_echo, PAGE,
-			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,
-			MHD_OPTION_STRICT_FOR_CLIENT, (int) 1,
-			MHD_OPTION_H2_SETTINGS, slen, settings,
-			MHD_OPTION_END);
+  d = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
+                        atoi (argv[1]),
+                        NULL, NULL, &ahc_echo, NULL, MHD_OPTION_END);
   if (d == NULL)
     return 1;
   (void) getc (stdin);

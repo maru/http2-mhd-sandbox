@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007 Christian Grothoff (and other contributing authors)
+     Copyright (C) 2007, 2008 Christian Grothoff (and other contributing authors)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -17,17 +17,21 @@
      Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 /**
- * @file http2_minimal_example.c
- * @brief minimal example for how to use libmicrohttpd with HTTP/2
- * @author Christian Grothoff
- * @author Maru Berezin
+ * @file refuse_post_example.c
+ * @brief example for how to refuse a POST request properly
+ * @author Christian Grothoff and Sebastian Gerhardt
  */
-
 #include "platform.h"
 #include <microhttpd.h>
-#include <nghttp2/nghttp2.h>
 
-#define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>\n"
+const char *askpage = "<html><body>\n\
+                       Upload a file, please!<br>\n\
+                       <form action=\"/filepost\" method=\"post\" enctype=\"multipart/form-data\">\n\
+                       <input name=\"file\" type=\"file\">\n\
+                       <input type=\"submit\" value=\" Send \"></form>\n\
+                       </body></html>";
+
+#define BUSYPAGE "<html><head><title>Webserver busy</title></head><body>We are too busy to process POSTs right now.</body></html>"
 
 static int
 ahc_echo (void *cls,
@@ -41,24 +45,37 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
+  (void)cls;               /* Unused. Silent compiler warning. */
   (void)url;               /* Unused. Silent compiler warning. */
   (void)version;           /* Unused. Silent compiler warning. */
   (void)upload_data;       /* Unused. Silent compiler warning. */
   (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
-  // if (0 != strcmp (method, "GET"))
-  //   return MHD_NO;              /* unexpected method */
+  if ((0 != strcmp (method, "GET")) && (0 != strcmp (method, "POST")))
+    return MHD_NO;              /* unexpected method */
+
   if (&aptr != *ptr)
     {
-      /* do never respond on first call */
       *ptr = &aptr;
-      return MHD_YES;
+
+      /* always to busy for POST requests */
+      if (0 == strcmp (method, "POST"))
+        {
+          response = MHD_create_response_from_buffer (strlen (BUSYPAGE),
+						      (void *) BUSYPAGE,
+						      MHD_RESPMEM_PERSISTENT);
+          ret =
+            MHD_queue_response (connection, MHD_HTTP_SERVICE_UNAVAILABLE,
+                                response);
+          MHD_destroy_response (response);
+          return ret;
+        }
     }
+
   *ptr = NULL;                  /* reset when done */
   response = MHD_create_response_from_buffer (strlen (me),
 					      (void *) me,
 					      MHD_RESPMEM_PERSISTENT);
-  MHD_add_response_header(response, "header-test", "my value");
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -74,28 +91,15 @@ main (int argc, char *const *argv)
       printf ("%s PORT\n", argv[0]);
       return 1;
     }
-
-  /* Default HTTP2 server settings */
-  nghttp2_settings_entry settings[3];
-  int slen = 0;
-  settings[slen].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
-  settings[slen].value = 100;
-  ++slen;
-
-  d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                        MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
-                        /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
-                      atoi (argv[1]),
-                      NULL, NULL, &ahc_echo, PAGE,
-			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,
-			MHD_OPTION_STRICT_FOR_CLIENT, (int) 1,
-			MHD_OPTION_H2_SETTINGS, slen, settings,
-			MHD_OPTION_END);
+  d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
+                        atoi (argv[1]),
+                        NULL, NULL, &ahc_echo, (void *) askpage,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 1;
   (void) getc (stdin);
   MHD_stop_daemon (d);
   return 0;
 }
+
+/* end of refuse_post_example.c */
