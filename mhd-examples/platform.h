@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <stddef.h>
 #include <sys/types.h>          /* See NOTES */
 #include <sys/socket.h>
