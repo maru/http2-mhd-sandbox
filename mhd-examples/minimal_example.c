@@ -17,8 +17,8 @@
      Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 /**
- * @file http2_minimal_example.c
- * @brief minimal example for how to use libmicrohttpd with HTTP/2
+ * @file minimal_example.c
+ * @brief minimal example for how to use libmicrohttpd
  * @author Christian Grothoff
  * @author Maru Berezin
  */
@@ -60,14 +60,6 @@ ahc_echo (void *cls,
   response = MHD_create_response_from_buffer (strlen (me),
 					      (void *) me,
 					      MHD_RESPMEM_PERSISTENT);
-
-  /* Add custom header */
-  MHD_add_response_header(response, "header-test", "my value");
-
-  /* Add custom trailer */
-  MHD_add_response_header(response, "Trailer", "foo");
-  MHD_add_response_footer(response, "foo", "bar");
-
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -110,16 +102,16 @@ main (int argc, char *const *argv)
                         /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                         MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-                        /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-                        /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
+			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
+			/* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                         port,
                         NULL, NULL, &ahc_echo, PAGE,
-                        MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,
-                        MHD_OPTION_STRICT_FOR_CLIENT, (int) 1,
+			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 120,
+			MHD_OPTION_STRICT_FOR_CLIENT, (int) 1,
 #ifdef HTTP2_SUPPORT
                         MHD_OPTION_H2_SETTINGS, slen, settings,
 #endif /* HTTP2_SUPPORT */
-                        MHD_OPTION_END);
+			MHD_OPTION_END);
   if (d == NULL)
     return 1;
   (void) getc (stdin);
