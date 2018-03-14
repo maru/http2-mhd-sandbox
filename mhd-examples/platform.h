@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 #include <stdarg.h>
 #include <errno.h>
 #include <fcntl.h>

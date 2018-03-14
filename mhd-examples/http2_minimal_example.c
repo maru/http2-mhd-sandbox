@@ -46,8 +46,8 @@ ahc_echo (void *cls,
   (void)upload_data;       /* Unused. Silent compiler warning. */
   (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
-  // if (0 != strcmp (method, "GET"))
-  //   return MHD_NO;              /* unexpected method */
+  if (0 != strcmp (method, "GET"))
+    return MHD_NO;              /* unexpected method */
   if (&aptr != *ptr)
     {
       /* do never respond on first call */
@@ -85,8 +85,8 @@ main (int argc, char *const *argv)
   d = MHD_start_daemon (/* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                         MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
                         /* MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
-      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
+                      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_POLL, */
+                      /* MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG, */
                       atoi (argv[1]),
                       NULL, NULL, &ahc_echo, PAGE,
 			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,

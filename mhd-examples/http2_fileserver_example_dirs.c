@@ -67,15 +67,12 @@ dir_reader (void *cls, uint64_t pos, char *buf, size_t max)
   if (max < 512)
     return 0;
   (void)pos; /* 'pos' is ignored as function return next one single entry per call. */
-fprintf(stderr, "[%s] %d\n", __FUNCTION__, __LINE__);
   do
     {
       e = readdir (dir);
-      fprintf(stderr, "[%s] %d\n", __FUNCTION__, __LINE__);
       if (e == NULL)
         return MHD_CONTENT_READER_END_OF_STREAM;
   } while (e->d_name[0] == '.');
-  fprintf(stderr, "[%s] %d\n", __FUNCTION__, __LINE__);
   return snprintf (buf, max,
 		   "<a href=\"/%s\">%s</a><br>",
 		   e->d_name,

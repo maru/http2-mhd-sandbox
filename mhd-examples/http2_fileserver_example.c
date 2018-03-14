@@ -124,7 +124,8 @@ main (int argc, char *const *argv)
     }
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_HTTP2,
                         atoi (argv[1]),
-                        NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
+                        NULL, NULL, &ahc_echo, PAGE,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 1;
   (void) getc (stdin);
