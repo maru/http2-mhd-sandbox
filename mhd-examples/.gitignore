@@ -1,2 +1,3 @@
-http2_*
-!http2_*.c
+*
+!*.c
+!platform.h

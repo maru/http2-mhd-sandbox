@@ -42,9 +42,7 @@
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#if HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
