@@ -25,9 +25,6 @@
 
 #include "platform.h"
 #include <microhttpd.h>
-#ifdef HTTP2_SUPPORT
-#include <nghttp2/nghttp2.h>
-#endif /* HTTP2_SUPPORT */
 
 #define PAGE "<html><head><title>libmicrohttpd demo</title></head><body>libmicrohttpd demo</body></html>"
 
