@@ -27,6 +27,24 @@
 #include <stdio.h>
 #include <errno.h>
 #include <microhttpd.h>
+#include <microhttpd_http2.h>
+#include <unistd.h>
+
+#define BUF_SIZE 4096
+#define CERTFILE "../testdata/cert.pem"
+#define KEYFILE  "../testdata/key.pem"
+
+char cert_pem[BUF_SIZE];
+char key_pem[BUF_SIZE];
+
+void
+load_contents (const char *path, char *buf)
+{
+  FILE *fp = fopen (path, "r");
+  if (!fp) { fprintf (stderr, "Cannot open file: %s\n", path); exit(0); }
+  fread (buf, BUF_SIZE, 1, fp);
+  fclose (fp);
+}
 
 /**
  * Index page.
@@ -124,11 +142,14 @@ create_response (void *cls,
 		 size_t *upload_data_size,
 		 void **ptr)
 {
+  static int aptr;
   struct MHD_Response *response;
   struct MHD_PostProcessor *pp;
   int ret;
   (void)cls;(void)version;      /* Unused. Silent compiler warning. */
   const char* encoding;
+
+
 
   /* Need this header to create a post processor */
   encoding = MHD_lookup_connection_value (connection,
@@ -141,29 +162,42 @@ create_response (void *cls,
                                 MHD_HTTP_POST_ENCODING_FORM_URLENCODED);
     }
 
+fprintf(stderr, "[%d] method %s ptr = %p\n", __LINE__, method, ptr);
   if (0 == strcmp (method, MHD_HTTP_METHOD_POST))
     {
       pp = *ptr;
       if (pp == NULL)
         {
           pp = MHD_create_post_processor (connection, 1024, &process_upload_data, NULL);
+          fprintf(stderr, "[%d] pp = %p\n", __LINE__, pp);
           *ptr = pp;
+          return MHD_YES;
         }
-      MHD_post_process (pp, upload_data, *upload_data_size);
-      if (0 == *upload_data_size)
-        {
-          response = MHD_create_response_from_buffer (strlen (url),
-                                                      (void *) url,
-                                                      MHD_RESPMEM_MUST_COPY);
-          ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
-          MHD_destroy_response (response);
-          MHD_destroy_post_processor (pp);
-          *ptr = NULL;
-          return ret;
-        }
-      *upload_data_size = 0;
+      if (0 != *upload_data_size)
+    	{
+          MHD_post_process (pp, upload_data, *upload_data_size);
+    	  *upload_data_size = 0;
+    	  return MHD_YES;
+    	}
+      /* end of upload, finish it! */
+      response = MHD_create_response_from_buffer (strlen (url),
+                                                  (void *) url,
+                                                  MHD_RESPMEM_MUST_COPY);
+      ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+      MHD_destroy_response (response);
+      fprintf(stderr, "[%d] pp = %p\n", __LINE__, pp);
+      MHD_destroy_post_processor (pp);
+      *ptr = NULL;
+      return ret;
+    }
+
+  if (&aptr != *ptr)
+    {
+      /* do never respond on first call */
+      *ptr = &aptr;
       return MHD_YES;
     }
+  *ptr = NULL;                  /* reset when done */
 
   if ( (0 == strcmp (method, MHD_HTTP_METHOD_GET)) ||
        (0 == strcmp (method, MHD_HTTP_METHOD_HEAD)) )
@@ -173,6 +207,7 @@ create_response (void *cls,
     					      MHD_RESPMEM_PERSISTENT);
       ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
       MHD_destroy_response (response);
+      fprintf(stderr, "[%d] method %s ptr = %p\n", __LINE__, method, ptr);
       return ret;
     }
   /* unsupported HTTP method */
@@ -204,8 +239,9 @@ request_completed_callback (void *cls,
   struct MHD_PostProcessor *pp = *con_cls;
   (void)cls;(void)connection;(void)toe; /* Unused. Silent compiler warning. */
 
-  if (NULL != pp)
-    MHD_destroy_post_processor (pp);
+  fprintf(stderr, "[%d] pp = %p con_cls = %p *con_cls = %p\n", __LINE__, pp, con_cls, *con_cls);
+  if (NULL != con_cls)
+    MHD_destroy_post_processor (*con_cls);
   *con_cls = NULL;
 }
 
@@ -218,33 +254,58 @@ int
 main (int argc, char *const *argv)
 {
   struct MHD_Daemon *d;
-  int use_http2 = 0;
-  uint16_t port;
+  uint16_t port = 8443;
 
-  switch (argc)
+  struct MHD_OptionItem no_ops[] = { { MHD_OPTION_END, 0, NULL } };
+  struct MHD_OptionItem *ops = no_ops;
+  struct MHD_OptionItem tls_ops[] = {
+   { MHD_OPTION_HTTPS_MEM_KEY, 0, key_pem },
+   { MHD_OPTION_HTTPS_MEM_CERT, 0, cert_pem },
+   { MHD_OPTION_END, 0, NULL }
+  };
+
+  int tls_flag = 0, opt;
+
+  while ((opt = getopt(argc, argv, "th:")) != -1)
     {
-    case 2:
-      port = atoi (argv[1]);
-      break;
-    case 3:
-      if (strcmp(argv[1], "-h2") == 0)
+      switch (opt)
         {
-          use_http2 = MHD_USE_HTTP2;
-          port = atoi (argv[2]);
-          break;
+          case 't':
+            tls_flag = MHD_USE_TLS;
+            load_contents (CERTFILE, cert_pem);
+            load_contents (KEYFILE, key_pem);
+            ops = tls_ops;
+            break;
+          case 'h':
+            if (2 != atoi(optarg))
+              {
+                fprintf(stderr, "Usage: %s [-t] [-h2] port\n", argv[0]);
+                exit (EXIT_FAILURE);
+              }
+            break;
+          default:
+            break;
         }
-    default:
-      printf ("%s [-h2] PORT\n", argv[0]);
-      return 1;
     }
+  // for (int i = 0; i < argc; i++) printf("[%d] %s\n", i, argv[i]);
 
-  /* initialize PRNG */
-  d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | use_http2,
+  /* For test 5.1.2. Stream Concurrency */
+  h2_settings_entry h2_settings[] = {
+      { .settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS,
+        .value = 1000 },
+  };
+  size_t slen = sizeof (h2_settings) / sizeof (h2_settings_entry);
+
+  d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_HTTP2 | tls_flag,
                         port,
                         NULL, NULL,
 			&create_response, NULL,
-			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 15,
+			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) 10,
 			MHD_OPTION_NOTIFY_COMPLETED, &request_completed_callback, NULL,
+                        MHD_OPTION_HTTP2_SETTINGS, slen, h2_settings,
+                        MHD_OPTION_HTTP2_DIRECT,  (int) 1,
+                        MHD_OPTION_HTTP2_UPGRADE, (int) 1,
+                        MHD_OPTION_ARRAY, ops,
 			MHD_OPTION_END);
   if (NULL == d)
     return 1;

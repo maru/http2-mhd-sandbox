@@ -3,6 +3,11 @@
 # Maru Berezin 
 # https://github.com/maru/libmicrohttpd-http2
 #
+# USAGE:
+#       LIBMICROHTTPD_HTTP2=$HOME/dev/http2/libmicrohttpd-http2
+# 	docker build --rm --force-rm -t mhd2 .
+# 	docker run --rm -t -v ${LIBMICROHTTPD_HTTP2}:/tmp/mhd2 mhd2
+#
 
 FROM debian:stable-slim
 
@@ -59,7 +64,8 @@ RUN wget -qO - https://curl.haxx.se/download/curl-${CURL_VERSION}.tar.gz \
 RUN echo "export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '" >> /root/.bashrc
 
 # Clean apt
-RUN apt-get clean \
+RUN true \
+	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Copy build.sh
@@ -67,4 +73,4 @@ COPY build.sh /build.sh
 RUN chmod +x /build.sh
 
 # Autorun
-# ENTRYPOINT [ "./build.sh" ]
+CMD [ "/build.sh" ]
