@@ -2,30 +2,29 @@
 set -e
 set -v
 
-MHD_OPTIONS="--enable-https --disable-doc --enable-silent-rules --enable-asserts --disable-examples"
 export LD_LIBRARY_PATH=/usr/local/lib
 
 cp -r /tmp/mhd2 /usr/src/mhd2
 cd /usr/src/mhd2
 
-(make -s clean || true)
-./bootstrap
-
-function check_http1
+function check_mhd
 {
-	echo "Testing HTTP/1: ./configure -q ${MHD_OPTIONS}"
-	./configure -q ${MHD_OPTIONS}
-	echo '#undef HAVE_INET6' >> MHD_config.h
-	make -s && make -s check
-}
+	MHD_OPTIONS="-q --enable-https --disable-doc --enable-silent-rules --enable-asserts --disable-examples"
+	MHD_OPTIONS="${MHD_OPTIONS} $1"
+	
+	echo -e "\033[38;5;219m============================================================================"
+	echo -e "./configure ${MHD_OPTIONS}"
+	echo -e "============================================================================\033[00m"
 
-function check_http2
-{
-	echo "Testing HTTP/2 ./configure -q ${MHD_OPTIONS} --enable-http2"
-	./configure -q ${MHD_OPTIONS} --enable-http2 
+	(make -s distclean || true)
+	./bootstrap --force
+
+	./configure ${MHD_OPTIONS} 
+	make -s
 	echo '#undef HAVE_INET6' >> MHD_config.h 
-	make -s && make -s check 
+	make -s check 
 }
 
-check_http2
-check_http1
+check_mhd "--disable-curl --enable-http2"
+check_mhd "--enable-http2"
+check_mhd
